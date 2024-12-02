@@ -78,6 +78,7 @@ int main(int argc, char **argv)
 	unsigned int buf[512];
 	int max_wait = EEH_STATE_MAX_WAIT_TIME;
 	int mwait = EEH_STATE_MIN_WAIT_TIME;
+	int keep_looping;
 
 
 	struct vfio_group_status group_status = {
@@ -339,17 +340,22 @@ int main(int argc, char **argv)
 	for(i = 0; i < 0x10; i+=0x4 )
 		printf("MMIO register offset 0x%X value 0x%X \n",i, read_u32(&pcidev, i));
 
-	pe_op.op = VFIO_EEH_PE_GET_STATE;
-	ret = ioctl(container, VFIO_EEH_PE_OP, &pe_op);
-	if( ret < 0) {
-		perror("");
-	}
-        printf("VFIO_EEH_PE_GET_STATE %d \n",ret);
+	keep_looping = 1;
+	do {
+		pe_op.op = VFIO_EEH_PE_GET_STATE;
+		ret = ioctl(container, VFIO_EEH_PE_OP, &pe_op);
+		if( ret < 0) {
+			perror("");
+		}
+		printf("VFIO_EEH_PE_GET_STATE %d \n",ret);
+		scanf("%d", &keep_looping);
+	} while ( keep_looping );
 	/* Waiting for pending PCI transactions to be completed and don't
  	* produce any more PCI traffic from/to the affected PE until
  	* recovery is finished.
  	*/
 
+#if 0
 	/* Enable IO for the affected PE and collect logs. Usually, the
  	* standard part of PCI config space, AER registers are dumped
 	 * as logs for further analysis.
@@ -357,6 +363,7 @@ int main(int argc, char **argv)
 	pe_op.op = VFIO_EEH_PE_UNFREEZE_IO;
 	ioctl(container, VFIO_EEH_PE_OP, &pe_op);
 	printf("VFIO_EEH_PE_UNFREEZE_IO\n");
+#endif
 
 	/*
 	 * Issue PE reset: hot or fundamental reset. Usually, hot reset
@@ -369,6 +376,17 @@ int main(int argc, char **argv)
         pe_op.op = VFIO_EEH_PE_GET_STATE;
 	
 	
+	keep_looping = 1;
+	do {
+		pe_op.op = VFIO_EEH_PE_GET_STATE;
+		ret = ioctl(container, VFIO_EEH_PE_OP, &pe_op);
+		if( ret < 0) {
+			perror("");
+		}
+		printf("VFIO_EEH_PE_GET_STATE %d \n",ret);
+		scanf("%d", &keep_looping);
+	} while ( keep_looping );
+#if 0
 	while (1)
 	{
 		ret = ioctl(container, VFIO_EEH_PE_OP, &pe_op);
@@ -390,6 +408,7 @@ int main(int argc, char **argv)
 
 	pe_op.op = VFIO_EEH_PE_RESET_DEACTIVATE;
 	ioctl(container, VFIO_EEH_PE_OP, &pe_op);
+#endif
 
 	/* Configure the PCI bridges for the affected PE */
 	pe_op.op = VFIO_EEH_PE_CONFIGURE;
